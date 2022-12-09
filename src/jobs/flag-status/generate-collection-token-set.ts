@@ -157,6 +157,10 @@ const getCollectionTokens = async (collectionId: string) => {
   return tokens;
 };
 
-export const addToQueue = async (contract: string, collectionId: string) => {
-  await queue.add(randomUUID(), { contract, collectionId });
+export const getLockName = () => {
+  return `${QUEUE_NAME}-lock`;
+};
+
+export const addToQueue = async (contract: string, collectionId: string, delay = 0) => {
+  await queue.add(randomUUID(), { contract, collectionId }, { delay });
 };

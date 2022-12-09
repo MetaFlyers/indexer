@@ -5,7 +5,7 @@ import { Job, Queue, QueueScheduler, Worker } from "bullmq";
 import _ from "lodash";
 import { idb, redb } from "@/common/db";
 import { logger } from "@/common/logger";
-import { redis } from "@/common/redis";
+import { acquireLock, redis } from "@/common/redis";
 import { toBuffer } from "@/common/utils";
 import { config } from "@/config/index";
 import * as resyncAttributeKeyCounts from "@/jobs/update-attribute/resync-attribute-key-counts";
@@ -139,7 +139,19 @@ if (config.doBackgroundWork) {
             },
           ]);
 
-          await flagStatusGenerateCollectionTokenSet.addToQueue(contract, result.collection_id);
+          if (await acquireLock(flagStatusGenerateCollectionTokenSet.getLockName(), 60)) {
+            logger.info(
+              QUEUE_NAME,
+              `Recalc Non Flagged Token Set. collectionId:${result.collection_id}, contract:${contract}, tokenId: ${tokenId}, IsFlagged:${isFlagged}, OldIsFlagged:${result.old_is_flagged}`
+            );
+
+            // Trigger a job to recalculate the non flagged token set
+            await flagStatusGenerateCollectionTokenSet.addToQueue(
+              contract,
+              result.collection_id,
+              60000
+            );
+          }
         }
 
         const addedTokenAttributes = [];
